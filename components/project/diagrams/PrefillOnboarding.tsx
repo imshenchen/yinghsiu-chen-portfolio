@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n";
 import { getMessages } from "@/lib/i18n";
+import { asset } from "@/lib/basePath";
 
 export default function PrefillOnboarding({ lang }: { lang: Locale }) {
   const t = getMessages(lang);
@@ -16,7 +17,7 @@ export default function PrefillOnboarding({ lang }: { lang: Locale }) {
       <div className="border-2 border-[var(--color-foreground)] bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/projects/prefill-onboarding-hint.png"
+          src={asset("/projects/prefill-onboarding-hint.png")}
           alt={title}
           loading="lazy"
           className="block w-full"

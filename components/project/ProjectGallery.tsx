@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/i18n";
 import { getMessages } from "@/lib/i18n";
 import type { Project } from "@/lib/projects";
+import { asset } from "@/lib/basePath";
 import { diagramRegistry } from "./diagrams";
 
 type Props = { lang: Locale; project: Project };
@@ -43,7 +44,7 @@ export default function ProjectGallery({ lang, project }: Props) {
                         <div className="border-2 border-[var(--color-foreground)] bg-white">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={img.src}
+                            src={asset(img.src)}
                             alt={img.alt[lang]}
                             loading="lazy"
                             className="block w-full"
@@ -68,7 +69,7 @@ export default function ProjectGallery({ lang, project }: Props) {
                 <div className="border-2 border-[var(--color-foreground)] bg-white">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={block.src}
+                    src={asset(block.src)}
                     alt={block.alt[lang]}
                     loading="lazy"
                     className="block w-full"

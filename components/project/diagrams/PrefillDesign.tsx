@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n";
 import { getMessages } from "@/lib/i18n";
+import { asset } from "@/lib/basePath";
 
 const IMAGES = [
   "/projects/prefill-edit-mode.png",
@@ -22,7 +23,7 @@ export default function PrefillDesign({ lang }: { lang: Locale }) {
             <div className="border-2 border-[var(--color-foreground)] bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={IMAGES[i]}
+                src={asset(IMAGES[i])}
                 alt={m.title}
                 loading="lazy"
                 className="block w-full"
