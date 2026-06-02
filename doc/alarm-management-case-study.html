@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系統監控與告警管理 — Open Source 整合到前端介面 | 作品集專案</title>
+
+<!--
+  ============================================================================
+  作品集專案：機聯網平台（DIAEAP+）系統監控與告警管理模組
+  ----------------------------------------------------------------------------
+  資料來源：
+    1.《EAP+ 告警管理提案》v1.0（2025/11/7, YH Chen）— 需求、四方案評估、架構
+    2. Figma《[DIAEAP] 系統監控-告警管理》— 封面 / 技術棧 React + MUI（YH, Ann）
+  範圍：從 Grafana / Keep / Odigos 等 open source 模組整合，到前端介面設計
+  ----------------------------------------------------------------------------
+  後續開發備註：
+    - 全頁單檔，設計 Token 集中於 :root
+    - 介面區塊以 CSS 重建為 mockup；要換成 Figma 實際匯出圖時，
+      搜尋「SCREEN-SLOT」即可定位佔位框，直接置入 PNG/SVG
+    - JS 僅做：導覽 active 狀態 + 進場動畫，可自由移除
+  ============================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================================================
+   1. 設計 Token
+   =========================================================================== */
+:root{
+  --ink:#0d1117; --ink-2:#1b2430; --muted:#5c6877; --faint:#8a95a3;
+  --line:#e3e8ee; --line-2:#eef2f6;
+  --bg:#eef1f5; --paper:#ffffff; --paper-2:#f6f8fb;
+
+  --primary:#155eef;        /* 平台主色（DIAEAP+ / MUI 藍） */
+  --primary-ink:#0b3aa3;
+  --primary-soft:#e7eefe;
+
+  /* 告警嚴重度色票 — 全頁視覺主軸 */
+  --crit:#e5484d;  --crit-soft:#fdecec;
+  --warn:#f59e0b;  --warn-soft:#fdf3e0;
+  --info:#155eef;  --info-soft:#e7eefe;
+  --ok:#16a34a;    --ok-soft:#e6f5ec;
+
+  /* open source 品牌色 */
+  --grafana:#f46800;
+  --keep:#7c3aed;
+  --odigos:#0ea5e9;
+
+  --r:14px; --r-sm:9px;
+  --shadow:0 1px 2px rgba(13,17,23,.04), 0 12px 30px -12px rgba(13,17,23,.14);
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --disp:'Archivo','Noto Sans TC',sans-serif;
+  --body:'Noto Sans TC','Archivo',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--body); color:var(--ink); background:var(--bg);
+  line-height:1.7; -webkit-font-smoothing:antialiased;
+  font-feature-settings:"palt" 1;
+}
+::selection{background:var(--primary);color:#fff}
+
+/* ===========================================================================
+   2. Layout：左側固定導覽 + 主內容
+   =========================================================================== */
+.wrap{display:grid;grid-template-columns:248px minmax(0,1fr);max-width:1320px;margin:0 auto}
+
+#nav{
+  position:sticky;top:0;align-self:start;height:100vh;
+  padding:38px 26px;border-right:1px solid var(--line);
+  background:linear-gradient(180deg,#fbfcfe,#f3f6fa);
+  display:flex;flex-direction:column;gap:6px;
+}
+.nav-brand{margin-bottom:26px}
+.nav-brand .logo{
+  font-family:var(--disp);font-weight:900;font-size:15px;letter-spacing:.04em;
+  display:flex;align-items:center;gap:8px;color:var(--ink)
+}
+.nav-brand .logo .dot{width:9px;height:9px;border-radius:50%;background:var(--crit);
+  box-shadow:0 0 0 4px var(--crit-soft);animation:pulse 2.4s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--crit-soft)}50%{box-shadow:0 0 0 7px transparent}}
+.nav-brand .sub{font-size:11px;color:var(--faint);margin-top:7px;letter-spacing:.02em;font-family:var(--mono)}
+
+#nav a{
+  display:flex;gap:11px;align-items:baseline;text-decoration:none;color:var(--muted);
+  font-size:13.5px;padding:7px 10px;border-radius:8px;transition:.18s;line-height:1.35
+}
+#nav a .n{font-family:var(--mono);font-size:11px;color:var(--faint);min-width:18px}
+#nav a:hover{background:var(--paper);color:var(--ink)}
+#nav a.active{background:var(--ink);color:#fff}
+#nav a.active .n{color:#7fb0ff}
+.nav-foot{margin-top:auto;font-size:10.5px;color:var(--faint);font-family:var(--mono);line-height:1.8}
+
+main{padding:0 0 90px}
+section{padding:64px 60px;border-bottom:1px solid var(--line-2);scroll-margin-top:0}
+.sec-head{display:flex;align-items:flex-start;gap:18px;margin-bottom:26px}
+.sec-head .num{font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;
+  background:var(--ink);border-radius:7px;padding:4px 9px;margin-top:6px}
+.sec-head h2{font-family:var(--disp);font-size:30px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
+.sec-head h2 small{display:block;font-family:var(--mono);font-size:11.5px;font-weight:500;
+  color:var(--faint);letter-spacing:.06em;margin-top:7px;text-transform:uppercase}
+.lead{font-size:16px;color:var(--ink-2);max-width:760px;margin-bottom:8px}
+.lead.tight{margin-bottom:30px}
+
+/* ===========================================================================
+   3. HERO
+   =========================================================================== */
+.hero{
+  background:
+    radial-gradient(900px 500px at 88% -8%, rgba(21,94,239,.22), transparent 60%),
+    radial-gradient(700px 460px at -4% 108%, rgba(229,72,77,.16), transparent 55%),
+    linear-gradient(160deg,#0d1117,#111a27 60%,#0d1117);
+  color:#fff;padding:78px 60px 66px;border-bottom:none;position:relative;overflow:hidden
+}
+.hero::after{content:"";position:absolute;inset:0;opacity:.05;pointer-events:none;
+  background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);
+  background-size:46px 46px}
+.hero .badges{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:30px;position:relative;z-index:1}
+.hero .badge{font-family:var(--mono);font-size:11px;letter-spacing:.05em;padding:6px 12px;border-radius:30px;
+  border:1px solid rgba(255,255,255,.2);color:#cdd7e3;background:rgba(255,255,255,.04)}
+.hero .badge.live{border-color:rgba(245,158,11,.5);color:#ffd591;display:flex;align-items:center;gap:7px}
+.hero .badge.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--warn);
+  box-shadow:0 0 0 3px rgba(245,158,11,.25);animation:pulse2 1.8s infinite}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-family:var(--disp);font-size:clamp(34px,5vw,58px);font-weight:900;line-height:1.04;
+  letter-spacing:-.02em;position:relative;z-index:1;max-width:14ch}
+.hero h1 em{font-style:normal;color:#5b9bff}
+.hero .tagline{font-size:18px;color:#aeb9c7;margin-top:22px;max-width:660px;position:relative;z-index:1}
+.hero .meta-grid{display:grid;grid-template-columns:repeat(4,auto);gap:38px;margin-top:46px;
+  position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.12);padding-top:26px}
+.hero .meta-grid .k{font-family:var(--mono);font-size:10.5px;color:#7d8a9a;letter-spacing:.08em;text-transform:uppercase}
+.hero .meta-grid .v{font-size:14.5px;color:#fff;margin-top:5px;font-weight:500}
+@media(max-width:760px){.hero .meta-grid{grid-template-columns:1fr 1fr;gap:22px}}
+
+/* ===========================================================================
+   4. 通用元件
+   =========================================================================== */
+.sev{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;
+  font-weight:700;letter-spacing:.04em;padding:3px 9px 3px 8px;border-radius:30px;white-space:nowrap}
+.sev .d{width:7px;height:7px;border-radius:50%}
+.sev.crit{background:var(--crit-soft);color:#b42318}.sev.crit .d{background:var(--crit)}
+.sev.warn{background:var(--warn-soft);color:#b54708}.sev.warn .d{background:var(--warn)}
+.sev.info{background:var(--info-soft);color:#0b3aa3}.sev.info .d{background:var(--info)}
+.sev.ok{background:var(--ok-soft);color:#067647}.sev.ok .d{background:var(--ok)}
+
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:500;
+  padding:4px 10px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink-2)}
+.chip .d{width:8px;height:8px;border-radius:2px}
+.chip.grafana .d{background:var(--grafana)} .chip.keep .d{background:var(--keep)}
+.chip.odigos .d{background:var(--odigos)} .chip.eap .d{background:var(--primary)}
+
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow)}
+.card h4{font-family:var(--disp);font-size:16px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:9px}
+.card p{font-size:13.5px;color:var(--muted)}
+.card .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;
+  background:var(--primary-soft);color:var(--primary)}
+
+/* 量化錨點 */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);
+  border-radius:var(--r);overflow:hidden;background:var(--paper);box-shadow:var(--shadow)}
+.stat{padding:24px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:none}
+.stat .v{font-family:var(--disp);font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1}
+.stat .v small{font-size:15px;font-weight:700;color:var(--muted)}
+.stat .l{font-size:12.5px;color:var(--muted);margin-top:9px}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:none}}
+
+/* ===========================================================================
+   5. 架構：管線 + 分層
+   =========================================================================== */
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:6px 0 30px;
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--paper)}
+.pipe .step{padding:18px 16px;border-right:1px solid var(--line);position:relative}
+.pipe .step:last-child{border-right:none}
+.pipe .step .ph{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
+.pipe .step .t{font-weight:700;font-size:14.5px;margin-top:6px;font-family:var(--disp)}
+.pipe .step .s{font-size:12px;color:var(--muted);margin-top:6px}
+.pipe .step::after{content:"→";position:absolute;right:-9px;top:50%;transform:translateY(-50%);
+  color:var(--faint);font-size:15px;z-index:2;background:var(--paper);padding:2px}
+.pipe .step:last-child::after{display:none}
+@media(max-width:900px){.pipe{grid-template-columns:1fr}
+  .pipe .step{border-right:none;border-bottom:1px solid var(--line)}
+  .pipe .step::after{content:"↓";right:50%;top:auto;bottom:-10px;transform:translateX(50%)}}
+
+.stack{display:flex;flex-direction:column;gap:12px}
+.layer{border:1px solid var(--line);border-radius:var(--r);background:var(--paper);overflow:hidden;
+  box-shadow:var(--shadow)}
+.layer .lh{display:flex;align-items:center;gap:12px;padding:13px 18px;background:var(--paper-2);
+  border-bottom:1px solid var(--line)}
+.layer .lh .tag{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.07em;
+  color:#fff;background:var(--ink);padding:3px 9px;border-radius:6px}
+.layer .lh .name{font-family:var(--disp);font-weight:700;font-size:15px}
+.layer .lh .name small{color:var(--muted);font-weight:400;font-size:12.5px;margin-left:8px;font-family:var(--body)}
+.layer .lb{display:flex;gap:10px;flex-wrap:wrap;padding:16px 18px}
+.node{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:13px 15px;background:var(--paper-2)}
+.node b{display:block;font-size:13.5px;font-family:var(--disp)}
+.node span{font-size:11.5px;color:var(--muted);display:block;margin-top:3px}
+.node.accent{border-color:var(--primary);background:var(--primary-soft)}
+.layer.ai{border-style:dashed}
+.layer.ai .lh{background:linear-gradient(90deg,#f3effe,#fbfcff)}
+.layer.ai .lh .tag{background:var(--keep)}
+
+/* ===========================================================================
+   6. 方案評估表
+   =========================================================================== */
+.tablewrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  box-shadow:var(--shadow);background:var(--paper);overflow-x:auto}
+table.eval{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}
+table.eval th,table.eval td{padding:13px 15px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line-2)}
+table.eval thead th{background:var(--ink);color:#fff;font-family:var(--disp);font-size:12.5px;
+  font-weight:700;position:sticky;top:0}
+table.eval thead th.lead-col{background:var(--ink)}
+table.eval thead th.win{background:var(--primary)}
+table.eval tbody th{font-family:var(--mono);font-size:11.5px;color:var(--muted);font-weight:500;
+  white-space:nowrap;background:var(--paper-2)}
+table.eval td.win{background:var(--primary-soft)}
+table.eval tr:last-child td,table.eval tr:last-child th{border-bottom:none}
+.tag-risk{color:#b42318;font-weight:500}
+.tag-na{color:var(--faint);font-family:var(--mono);font-size:11px}
+.winflag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+  font-weight:700;color:#fff;background:var(--primary);padding:2px 7px;border-radius:20px;letter-spacing:.05em}
+
+/* ===========================================================================
+   7. 介面 mockup
+   =========================================================================== */
+.screen{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--paper);
+  box-shadow:var(--shadow)}
+.screen .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--paper-2);
+  border-bottom:1px solid var(--line)}
+.screen .bar .dots{display:flex;gap:6px}.screen .bar .dots i{width:9px;height:9px;border-radius:50%;background:#d6dce4}
+.screen .bar .url{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:8px}
+.screen .body{padding:0}
+
+/* 告警列表 */
+.alist{font-size:13px}
+.alist .toolbar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.alist .toolbar .title{font-family:var(--disp);font-weight:800;font-size:16px;margin-right:auto}
+.alist .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.alist .seg button{border:none;background:var(--paper);padding:6px 12px;font-size:12px;font-family:var(--mono);
+  color:var(--muted);cursor:default;border-right:1px solid var(--line)}
+.alist .seg button:last-child{border-right:none}
+.alist .seg button.on{background:var(--ink);color:#fff}
+.alist table{width:100%;border-collapse:collapse}
+.alist th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--faint);
+  text-transform:uppercase;padding:10px 18px;border-bottom:1px solid var(--line-2);font-weight:500}
+.alist td{padding:13px 18px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.alist tr:last-child td{border-bottom:none}
+.alist .src{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.alist .msg{font-weight:500}.alist .msg span{display:block;font-size:11.5px;color:var(--faint);font-weight:400}
+.alist .time{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.alist .st{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.alist .st.open{border-color:var(--crit);color:#b42318}
+.alist .st.ack{border-color:var(--warn);color:#b54708}
+.alist .st.res{border-color:var(--ok);color:#067647}
+
+/* 小鈴鐺 */
+.bell{position:relative;width:330px;max-width:100%}
+.bell .head{display:flex;align-items:center;gap:9px;padding:14px 16px;border-bottom:1px solid var(--line-2)}
+.bell .head b{font-family:var(--disp);font-size:14.5px}
+.bell .head .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--crit);color:#fff;
+  padding:2px 8px;border-radius:20px}
+.bell .item{display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line-2)}
+.bell .item:last-child{border-bottom:none}
+.bell .item .ic{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center}
+.bell .item .ic.crit{background:var(--crit-soft);color:var(--crit)}
+.bell .item .ic.warn{background:var(--warn-soft);color:var(--warn)}
+.bell .item .ic.info{background:var(--info-soft);color:var(--info)}
+.bell .item .tx b{font-size:13px;display:block}
+.bell .item .tx span{font-size:11.5px;color:var(--muted)}
+.bell .item .tx .t{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:3px;display:block}
+
+/* 渠道設定 */
+.chan{padding:18px}
+.chan .row{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);
+  border-radius:10px;margin-bottom:10px;background:var(--paper-2)}
+.chan .row:last-child{margin-bottom:0}
+.chan .row .ic{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex:none;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:#fff}
+.chan .row .info b{font-size:13.5px;font-family:var(--disp)}
+.chan .row .info span{font-size:11.5px;color:var(--muted);display:block}
+.chan .row .sw{margin-left:auto;width:42px;height:24px;border-radius:20px;background:var(--primary);position:relative;flex:none}
+.chan .row .sw::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:3px}
+.chan .row.off .sw{background:#cbd3dd}.chan .row.off .sw::after{right:auto;left:3px}
+
+.caption{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:10px;display:flex;gap:8px;align-items:center}
+.caption .s{color:var(--primary)}
+
+/* SCREEN-SLOT 佔位 */
+.screen-slot{margin-top:14px;border:1.5px dashed var(--line);border-radius:10px;padding:13px 15px;
+  background:repeating-linear-gradient(45deg,var(--paper-2),var(--paper-2) 10px,#f0f3f7 10px,#f0f3f7 20px);
+  font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;gap:9px;align-items:center}
+.screen-slot b{color:var(--muted)}
+
+/* ===========================================================================
+   8. 對照表 / Roadmap / 開源卡
+   =========================================================================== */
+.maptable{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);background:var(--paper)}
+.maptable .mrow{display:grid;grid-template-columns:1fr 44px 1fr;align-items:center;border-bottom:1px solid var(--line-2)}
+.maptable .mrow:last-child{border-bottom:none}
+.maptable .from,.maptable .to{padding:16px 18px}
+.maptable .from{background:var(--paper-2)}
+.maptable .arrowc{text-align:center;color:var(--faint);font-size:16px}
+.maptable .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:5px}
+.maptable .from b{font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.maptable .to b{font-size:13.5px;font-family:var(--disp);font-weight:700}
+.maptable .to span{font-size:12px;color:var(--muted);display:block;margin-top:3px}
+@media(max-width:760px){.maptable .mrow{grid-template-columns:1fr}.maptable .arrowc{padding:0 0 6px}
+  .maptable .arrowc::before{content:"↓"}.maptable .arrowc{font-size:14px}}
+
+.os{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.os{grid-template-columns:1fr}}
+.oscard{border:1px solid var(--line);border-radius:var(--r);background:var(--paper);overflow:hidden;box-shadow:var(--shadow)}
+.oscard .top{padding:18px 20px 14px;border-bottom:1px solid var(--line-2)}
+.oscard .top .nm{font-family:var(--disp);font-weight:800;font-size:18px;display:flex;align-items:center;gap:9px}
+.oscard .top .nm .d{width:11px;height:11px;border-radius:3px}
+.oscard .top .role{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:4px}
+.oscard ul{list-style:none;padding:14px 20px}
+.oscard li{font-size:12.5px;color:var(--muted);padding-left:18px;position:relative;margin-bottom:8px}
+.oscard li:last-child{margin-bottom:0}
+.oscard li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--line)}
+
+.roadmap{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:8px}
+.rm{position:relative;padding:0 0 26px 28px}
+.rm:last-child{padding-bottom:0}
+.rm::before{content:"";position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%;
+  background:var(--paper);border:2px solid var(--line)}
+.rm.next::before{border-color:var(--primary);background:var(--primary)}
+.rm .ph{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--faint)}
+.rm.next .ph{color:var(--primary)}
+.rm h4{font-family:var(--disp);font-size:15px;font-weight:700;margin:5px 0 5px}
+.rm p{font-size:13px;color:var(--muted)}
+
+.issue{display:flex;gap:13px;padding:15px 0;border-bottom:1px solid var(--line-2)}
+.issue:last-child{border-bottom:none}
+.issue .q{flex:none;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--warn);
+  background:var(--warn-soft);border-radius:7px;padding:4px 8px;height:fit-content}
+.issue .c b{font-size:14px;font-family:var(--disp)}
+.issue .c p{font-size:13px;color:var(--muted);margin-top:3px}
+
+footer{padding:40px 60px;display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:space-between;
+  font-family:var(--mono);font-size:11px;color:var(--faint);background:var(--ink);color:#8a95a3}
+footer span{display:block}
+
+/* 進場動畫 */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media(max-width:920px){
+  .wrap{grid-template-columns:1fr}
+  #nav{display:none}
+  section,.hero,footer{padding-left:24px;padding-right:24px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============================ 左側導覽 ============================ -->
+  <nav id="nav">
+    <div class="nav-brand">
+      <div class="logo"><span class="dot"></span>ALARM&nbsp;MGMT</div>
+      <div class="sub">DIAEAP+ · CASE STUDY</div>
+    </div>
+    <a href="#overview"><span class="n">01</span>專案概述</a>
+    <a href="#requirement"><span class="n">02</span>需求與限制</a>
+    <a href="#architecture"><span class="n">03</span>系統架構</a>
+    <a href="#evaluation"><span class="n">04</span>方案評估與決策</a>
+    <a href="#opensource"><span class="n">05</span>開源整合</a>
+    <a href="#interface"><span class="n">06</span>前端介面設計</a>
+    <a href="#roadmap"><span class="n">07</span>待解議題與規劃</a>
+    <div class="nav-foot">
+      SOURCE · 告警管理提案 v1.0<br>FIGMA · DIAEAP 系統監控<br>BUILT 2026 · 單檔 HTML
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============================ HERO ============================ -->
+    <header class="hero">
+      <div class="badges">
+        <span class="badge live">In Progress</span>
+        <span class="badge">WEB · React + MUI</span>
+        <span class="badge">機聯網平台 DIAEAP+</span>
+        <span class="badge">OPEN SOURCE 整合</span>
+      </div>
+      <h1>系統監控與<br><em>告警管理</em>模組</h1>
+      <p class="tagline">從 Grafana、Keep、Odigos 等開源模組的整合架構，到平台端「事件中心 / 告警列表 / 小鈴鐺」的前端介面設計——一個橫跨架構決策與介面落地的機聯網平台模組。</p>
+      <div class="meta-grid">
+        <div><div class="k">Platform</div><div class="v">DIAEAP+（AIoT 機聯網）</div></div>
+        <div><div class="k">My Role</div><div class="v">架構提案 · 介面設計規劃</div></div>
+        <div><div class="k">Users</div><div class="v">SI · App Dev · End User</div></div>
+        <div><div class="k">Stack</div><div class="v">Grafana · Keep · Odigos · React</div></div>
+      </div>
+    </header>
+
+    <!-- ============================ 01 概述 ============================ -->
+    <section id="overview">
+      <div class="sec-head"><span class="num">01</span>
+        <h2>專案概述<small>OVERVIEW · 平台級告警管理模組</small></h2></div>
+      <p class="lead tight">DIAEAP+ 是部署於廠內的 AIoT 機聯網平台。本模組要回答一個問題：當底層服務（PLC → … → RabbitMQ）發生異常時，如何<strong>被監控到、被判斷成告警、被送到對的人手上</strong>，並在平台前端被妥善管理。本案例聚焦在「如何用開源模組組裝這條鏈，並設計平台端的操作介面」。</p>
+
+      <div class="grid g3">
+        <div class="card">
+          <h4><span class="ic">◷</span>監控 Observability</h4>
+          <p>以 <b>Odigos</b> 監控從 PLC 往上到 RabbitMQ 之間的所有服務，並建立數據血緣（data lineage），讓異常可被追溯來源。</p>
+        </div>
+        <div class="card">
+          <h4><span class="ic">⚑</span>告警 Alerting</h4>
+          <p>異常觸發後，串接 <b>Keep</b> 進行彙整與發報，初期渠道為 <b>Email</b> 與 EAP+ 平台的「小鈴鐺」通知。</p>
+        </div>
+        <div class="card">
+          <h4><span class="ic">▤</span>平台管理 UI</h4>
+          <p>在 EAP+ 前端提供<b>告警列表</b>、<b>小鈴鐺通知</b>與<b>通知渠道設定</b>；規則設定 UI 列為後續階段。</p>
+        </div>
+      </div>
+
+      <div class="stats" style="margin-top:22px">
+        <div class="stat"><div class="v">4</div><div class="l">候選架構方案<br>並列評估後收斂</div></div>
+        <div class="stat"><div class="v">3</div><div class="l">整合的開源模組<br>Grafana · Keep · Odigos</div></div>
+        <div class="stat"><div class="v">3</div><div class="l">目標用戶角色<br>SI 為主，含 App Dev / End User</div></div>
+        <div class="stat"><div class="v">3<small> 個</small></div><div class="l">MVP 前端介面<br>事件中心 / 列表 / 小鈴鐺</div></div>
+      </div>
+    </section>
+
+    <!-- ============================ 02 需求 ============================ -->
+    <section id="requirement">
+      <div class="sec-head"><span class="num">02</span>
+        <h2>需求與限制<small>REQUIREMENTS · MVP 範疇界定</small></h2></div>
+      <p class="lead tight">需求源自與 PM（Mike）的討論。重點不只在「要做什麼」，更在於「<strong>MVP 先不做什麼</strong>」——把範疇收斂到可交付，是這次提案的關鍵前提。</p>
+
+      <div class="grid g2">
+        <div class="card">
+          <h4>✓ MVP 範圍內</h4>
+          <p style="margin-bottom:12px">監控 PLC→RabbitMQ 間服務（Odigos）、異常跳通知（小鈴鐺）、串 Keep 發告警（先 Email）、提供平台告警列表與通知渠道設定。</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <span class="chip odigos"><span class="d"></span>服務監控</span>
+            <span class="chip keep"><span class="d"></span>告警發報</span>
+            <span class="chip eap"><span class="d"></span>告警列表 UI</span>
+            <span class="chip eap"><span class="d"></span>小鈴鐺通知</span>
+          </div>
+        </div>
+        <div class="card" style="border-style:dashed">
+          <h4>✕ MVP 範圍外（後續）</h4>
+          <p style="margin-bottom:12px">不開發「讓使用者新增規則」的頁面功能——MVP 階段由團隊<b>預設配置一組規則</b>即可。廠內 DFoC 整合另議。</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <span class="chip"><span class="d" style="background:var(--faint)"></span>規則設定 UI</span>
+            <span class="chip"><span class="d" style="background:var(--faint)"></span>DFoC 整合</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid g3" style="margin-top:18px">
+        <div class="card"><h4 style="font-size:14px">主要用戶</h4>
+          <p>SI（系統整合商，主要對象）→ App Dev → End User。功能定位<b>優先滿足 SI</b>，後續再延伸至 End User。</p></div>
+        <div class="card"><h4 style="font-size:14px">平台環境</h4>
+          <p>Web。前端以 <b>React + MUI</b> 實作，與 DIAEAP+ 既有平台一致。</p></div>
+        <div class="card"><h4 style="font-size:14px">通知渠道優先序</h4>
+          <p>第一階段以 <b>Email</b> 與平台<b>小鈴鐺</b>為主；Slack / Webhook 等渠道隨架構選型開放。</p></div>
+      </div>
+    </section>
+
+    <!-- ============================ 03 架構 ============================ -->
+    <section id="architecture">
+      <div class="sec-head"><span class="num">03</span>
+        <h2>系統架構<small>ARCHITECTURE · 從接收到發報的告警鏈</small></h2></div>
+      <p class="lead tight">整條告警鏈分成五個階段。重點在於：<strong>規則引擎</strong>與<strong>彙整發報</strong>各自要落在哪個開源模組上——這正是下一節四個方案的分歧點。</p>
+
+      <div class="pipe">
+        <div class="step"><div class="ph">STAGE 01</div><div class="t">接收</div><div class="s">資料來源（如 Prometheus）注入</div></div>
+        <div class="step"><div class="ph">STAGE 02</div><div class="t">狀態監控</div><div class="s">Odigos 觀測服務 + 數據血緣</div></div>
+        <div class="step"><div class="ph">STAGE 03</div><div class="t">規則設定</div><div class="s">判斷觸發條件（引擎選型）</div></div>
+        <div class="step"><div class="ph">STAGE 04</div><div class="t">彙整發報</div><div class="s">Keep 彙總 + 推送至各渠道</div></div>
+        <div class="step"><div class="ph">STAGE 05</div><div class="t">通知渠道</div><div class="s">Email / 小鈴鐺 / 列表</div></div>
+      </div>
+
+      <p class="lead tight" style="margin-top:6px">以分層視角呈現解法一（推薦基礎）的資料流：</p>
+      <div class="stack">
+        <div class="layer">
+          <div class="lh"><span class="tag">DATA</span><span class="name">資料層<small>監控數據來源</small></span></div>
+          <div class="lb">
+            <div class="node"><b>資料來源</b><span>Ex. Prometheus / Loki / InfluxDB</span></div>
+            <div class="node"><b>Odigos</b><span>服務狀態監控 · 數據血緣</span></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lh"><span class="tag">RULE</span><span class="name">規則引擎層<small>判斷觸發規則</small></span></div>
+          <div class="lb">
+            <div class="node accent"><b>Grafana Rule Engine</b><span>多資料源 · 多條件查詢 · 複雜表達式</span></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lh"><span class="tag">DISPATCH</span><span class="name">彙整發報層<small>發布至各渠道與對象</small></span></div>
+          <div class="lb">
+            <div class="node accent"><b>Keep</b><span>警報彙總 · 資料拓樸 · Workflow 推送</span></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="lh"><span class="tag">UI</span><span class="name">通知與管理層<small>EAP+ 前端</small></span></div>
+          <div class="lb">
+            <div class="node"><b>Email</b><span>外部通知渠道</span></div>
+            <div class="node"><b>EAP+ 告警列表 UI</b><span>事件列表 · 顯示狀態 · 變更狀態</span></div>
+            <div class="node"><b>EAP+ 小鈴鐺 Notify UI</b><span>平台內即時通知</span></div>
+          </div>
+        </div>
+        <div class="layer ai">
+          <div class="lh"><span class="tag">AI</span><span class="name">LLM Support（橫貫）<small>智能改善建議</small></span></div>
+          <div class="lb">
+            <div class="node"><b>LLM 輔助</b><span>對告警事件提供研判與處理建議，貫穿規則與彙整層</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ 04 方案評估 ============================ -->
+    <section id="evaluation">
+      <div class="sec-head"><span class="num">04</span>
+        <h2>方案評估與決策<small>EVALUATION · 四個架構方案的取捨</small></h2></div>
+      <p class="lead tight">差異核心是兩個問題：<strong>規則引擎放哪？發報彙整放哪？</strong>四個方案在「彈性、第三方依賴、開發成本」之間做不同取捨。經評估後<span class="winflag">傾向 解法二</span>——以 Grafana 設規則、Keep 統一發報與彙整，兼顧查詢彈性與單一彙整入口。</p>
+
+      <div class="tablewrap">
+        <table class="eval">
+          <thead><tr>
+            <th>評估維度</th>
+            <th>解法一</th>
+            <th class="win">解法二 ★</th>
+            <th>解法三</th>
+            <th>解法四</th>
+          </tr></thead>
+          <tbody>
+            <tr><th>規則 / 發報 / 彙整</th>
+              <td>Grafana 設規則+發報，Keep 彙整</td>
+              <td class="win">Grafana 設規則，Keep 發報+彙整</td>
+              <td>Keep 設規則+發報+彙整</td>
+              <td>自研 Lite 引擎設規則，Keep 發報+彙整</td></tr>
+            <tr><th>主要優勢</th>
+              <td>Grafana 多資料源、多條件、複雜表達式；Keep 做警報資料拓樸</td>
+              <td class="win">同左查詢彈性，且發報與彙整集中於 Keep，入口單一</td>
+              <td>規則 / 發報 / 清單全於 Keep 平台完成</td>
+              <td>不受第三方限制（如規則數上限）</td></tr>
+            <tr><th>主要風險</th>
+              <td class="tag-risk">Grafana 免費版限 100 條規則</td>
+              <td class="win tag-risk">Grafana 免費版限 100 條規則</td>
+              <td class="tag-risk">完全依賴單一第三方；規則經 Workflow 設定，前端整合方式待議（YAML or UI）</td>
+              <td class="tag-risk">開發範圍大；與 Keep 串接可行性待評估</td></tr>
+            <tr><th>建立規則判斷</th>
+              <td>Loki / InfluxDB / Prometheus / Infinity</td>
+              <td class="win">Loki / InfluxDB / Prometheus / Infinity</td>
+              <td>Keep Workflow 功能</td>
+              <td>規則算式（待定）</td></tr>
+            <tr><th>建立規則 API</th>
+              <td>Direct HTTP REST</td>
+              <td class="win">Direct HTTP REST</td>
+              <td>Workflow API（HTTP + YAML）</td>
+              <td class="tag-na">N/A</td></tr>
+            <tr><th>發送對象群組</th>
+              <td>Contact Point：email 群組 / Slack / Webhook</td>
+              <td class="win">Keep workflow automation + provider，多端同步推送</td>
+              <td>Keep workflow automation + provider，多端同步推送</td>
+              <td>待團隊評估</td></tr>
+            <tr><th>取得警報列表 API</th>
+              <td><span class="sev ok"><span class="d"></span>Y</span></td>
+              <td class="win"><span class="sev ok"><span class="d"></span>Y</span></td>
+              <td><span class="sev ok"><span class="d"></span>Y</span></td>
+              <td class="tag-na">N/A</td></tr>
+            <tr><th>變更告警狀態 API</th>
+              <td class="tag-na">待評估</td>
+              <td class="win tag-na">待評估</td>
+              <td class="tag-na">待評估</td>
+              <td class="tag-na">N/A</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="caption"><span class="s">★</span> 解法二為目前傾向方案，仍待確認是否有未解區塊需進一步調查才能定案（見第 07 節）。</div>
+    </section>
+
+    <!-- ============================ 05 開源整合 ============================ -->
+    <section id="opensource">
+      <div class="sec-head"><span class="num">05</span>
+        <h2>開源整合<small>OPEN SOURCE · 三個模組的職責分工</small></h2></div>
+      <p class="lead tight">這個模組的本質是<strong>整合而非重造</strong>。三個開源元件各司其職，平台的價值在於把它們黏合成一條可被前端操作的告警鏈。</p>
+
+      <div class="os">
+        <div class="oscard">
+          <div class="top"><div class="nm"><span class="d" style="background:var(--odigos)"></span>Odigos</div>
+            <div class="role">監控層 · OBSERVABILITY</div></div>
+          <ul>
+            <li>監控 PLC → RabbitMQ 之間的所有服務</li>
+            <li>建立數據血緣，讓告警可回溯來源服務</li>
+            <li>作為規則引擎的觀測數據基礎</li>
+          </ul>
+        </div>
+        <div class="oscard">
+          <div class="top"><div class="nm"><span class="d" style="background:var(--grafana)"></span>Grafana</div>
+            <div class="role">規則引擎 · RULE ENGINE</div></div>
+          <ul>
+            <li>支援 Loki / InfluxDB / Prometheus / Infinity / SIE-edgeX 等資料源</li>
+            <li>多條件查詢與複雜表達式設定規則</li>
+            <li>Direct HTTP REST API 建立規則判斷</li>
+            <li>限制：免費版規則上限 100 條</li>
+          </ul>
+        </div>
+        <div class="oscard">
+          <div class="top"><div class="nm"><span class="d" style="background:var(--keep)"></span>Keep</div>
+            <div class="role">彙整發報 · AIOps</div></div>
+          <ul>
+            <li>警報彙總與資料拓樸（correlation）</li>
+            <li>Workflow automation + provider 推送多渠道</li>
+            <li>提供取得警報列表 API；變更狀態 API 待評估</li>
+            <li>支援 YAML 與 UI Builder；可串 Incidents 異動與 AI 改善建議</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h4 style="font-size:14px">整合介面摘要</h4>
+        <p>規則層以 <b>REST API</b> 對 Grafana 建立 / 查詢規則；發報層以 Keep 的 <b>Workflow（HTTP + YAML）</b>定義 actions，將告警同步推送至 Email、Slack、Webhook 及 EAP+ 小鈴鐺；前端透過 Keep 列表 API 取得事件，並（待評估）回寫告警狀態。LLM 作為橫貫能力，對事件提供研判與處理建議。</p>
+      </div>
+    </section>
+
+    <!-- ============================ 06 前端介面 ============================ -->
+    <section id="interface">
+      <div class="sec-head"><span class="num">06</span>
+        <h2>前端介面設計<small>INTERFACE · 事件中心 / 列表 / 小鈴鐺</small></h2></div>
+      <p class="lead tight">MVP 需開發的介面集中在「事件中心」：<strong>告警列表</strong>、<strong>小鈴鐺通知</strong>、<strong>通知渠道設定</strong>。以下為依提案內容重建的介面 mockup（React + MUI），實際畫面以 Figma 為準。</p>
+
+      <!-- 告警列表 -->
+      <h4 style="font-family:var(--disp);font-size:17px;margin:8px 0 14px">① 告警列表 · Alarm List</h4>
+      <div class="screen">
+        <div class="bar"><div class="dots"><i></i><i></i><i></i></div>
+          <span class="url">diaeap.local / event-center / alarms</span></div>
+        <div class="body">
+          <div class="alist">
+            <div class="toolbar">
+              <span class="title">事件中心 — 告警列表</span>
+              <div class="seg">
+                <button class="on">全部</button><button>Critical</button>
+                <button>Warning</button><button>已解決</button>
+              </div>
+            </div>
+            <table>
+              <thead><tr><th>嚴重度</th><th>事件</th><th>來源服務</th><th>觸發時間</th><th>狀態</th></tr></thead>
+              <tbody>
+                <tr><td><span class="sev crit"><span class="d"></span>CRITICAL</span></td>
+                  <td class="msg">RabbitMQ 佇列堆積超過閾值<span>queue depth &gt; 10,000 持續 5 分鐘</span></td>
+                  <td class="src">mq-broker-01</td><td class="time">11/21 09:42</td>
+                  <td><span class="st open">OPEN</span></td></tr>
+                <tr><td><span class="sev warn"><span class="d"></span>WARNING</span></td>
+                  <td class="msg">PLC 連線延遲偏高<span>latency p95 = 820ms</span></td>
+                  <td class="src">plc-gateway-03</td><td class="time">11/21 09:30</td>
+                  <td><span class="st ack">ACK</span></td></tr>
+                <tr><td><span class="sev info"><span class="d"></span>INFO</span></td>
+                  <td class="msg">Odigos collector 重啟完成<span>service auto-recovered</span></td>
+                  <td class="src">odigos-collector</td><td class="time">11/21 08:58</td>
+                  <td><span class="st res">RESOLVED</span></td></tr>
+                <tr><td><span class="sev crit"><span class="d"></span>CRITICAL</span></td>
+                  <td class="msg">設備資料採集中斷<span>no data received 3m</span></td>
+                  <td class="src">edge-node-12</td><td class="time">11/21 08:41</td>
+                  <td><span class="st open">OPEN</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="caption">資料來自 Keep 列表 API；狀態變更（OPEN → ACK → RESOLVED）對應「變更告警狀態 API」<span class="s">＊待評估</span></div>
+      <div class="screen-slot">SCREEN-SLOT&nbsp;·&nbsp;<b>告警列表</b>&nbsp;— 置入 Figma 匯出圖（[DIAEAP] 系統監控-告警管理 / Alarm List）</div>
+
+      <!-- 小鈴鐺 + 渠道設定 -->
+      <div class="grid g2" style="margin-top:30px;align-items:start">
+        <div>
+          <h4 style="font-family:var(--disp);font-size:17px;margin:0 0 14px">② 小鈴鐺通知 · Notify</h4>
+          <div class="screen bell">
+            <div class="head">⚑&nbsp;<b>通知</b><span class="cnt">3 則未讀</span></div>
+            <div class="item"><div class="ic crit">⚠</div><div class="tx">
+              <b>RabbitMQ 佇列堆積超過閾值</b><span>mq-broker-01 · Critical</span>
+              <span class="t">2 分鐘前</span></div></div>
+            <div class="item"><div class="ic warn">!</div><div class="tx">
+              <b>PLC 連線延遲偏高</b><span>plc-gateway-03 · Warning</span>
+              <span class="t">14 分鐘前</span></div></div>
+            <div class="item"><div class="ic info">i</div><div class="tx">
+              <b>設備資料採集中斷</b><span>edge-node-12 · Critical</span>
+              <span class="t">1 小時前</span></div></div>
+          </div>
+          <div class="caption">由 Keep Incident 透過 Workflow 觸發；多台 EAP+ 共用一個 Keep 時的列表 / 小鈴鐺<span class="s">區分機制待設計</span></div>
+        </div>
+        <div>
+          <h4 style="font-family:var(--disp);font-size:17px;margin:0 0 14px">③ 通知渠道設定 · Channels</h4>
+          <div class="screen">
+            <div class="bar"><div class="dots"><i></i><i></i><i></i></div>
+              <span class="url">… / event-center / channels</span></div>
+            <div class="chan">
+              <div class="row"><div class="ic" style="background:var(--crit)">@</div>
+                <div class="info"><b>Email</b><span>MVP 第一階段預設渠道</span></div><div class="sw"></div></div>
+              <div class="row"><div class="ic" style="background:var(--primary)">⌁</div>
+                <div class="info"><b>EAP+ 小鈴鐺</b><span>平台內即時通知</span></div><div class="sw"></div></div>
+              <div class="row off"><div class="ic" style="background:#611f69">#</div>
+                <div class="info"><b>Slack</b><span>Keep provider · 後續開放</span></div><div class="sw"></div></div>
+              <div class="row off"><div class="ic" style="background:var(--keep)">⇄</div>
+                <div class="info"><b>Webhook</b><span>Keep workflow actions</span></div><div class="sw"></div></div>
+            </div>
+          </div>
+          <div class="caption">對應方案二：Keep workflow automation 搭配 provider 設定收件對象</div>
+        </div>
+      </div>
+      <div class="screen-slot">SCREEN-SLOT&nbsp;·&nbsp;<b>小鈴鐺 / 渠道設定</b>&nbsp;— 置入 Figma 匯出圖（Notify / Channel Settings）</div>
+
+      <div class="card" style="margin-top:26px;border-style:dashed">
+        <h4 style="font-size:14px">④ 規則設定 UI（後續階段）</h4>
+        <p>MVP 不開發使用者新增規則的頁面，先由團隊預設規則。後續若採方案二，規則經 Grafana REST API 建立；若觸及 Keep Workflow，前端需進一步決定以 YAML 或 UI Builder 呈現——此為尚待討論的整合議題。</p>
+      </div>
+    </section>
+
+    <!-- ============================ 07 議題與規劃 ============================ -->
+    <section id="roadmap">
+      <div class="sec-head"><span class="num">07</span>
+        <h2>待解議題與規劃<small>ROADMAP · 從提案導出的下一步</small></h2></div>
+      <p class="lead tight">提案 v1.0 後仍有數個待確認議題，構成後續開發與會議的主軸。把「未決問題」誠實列出，本身就是這份架構提案的一部分。</p>
+
+      <div class="grid g2" style="align-items:start">
+        <div class="card">
+          <h4 style="font-size:15px;margin-bottom:14px">待確認議題</h4>
+          <div class="issue"><span class="q">架構</span><div class="c">
+            <b>最終採用哪一方案</b><p>傾向解法二，仍需確認是否有未解區塊需進一步調查才能定案。</p></div></div>
+          <div class="issue"><span class="q">定位</span><div class="c">
+            <b>SI 優先、2.0 歸屬哪個平台</b><p>優先滿足 SI 再延伸 End User；2.0 在「開發者 / 通用」平台兩邊都有。</p></div></div>
+          <div class="issue"><span class="q">通知</span><div class="c">
+            <b>App Dev 如何經平台發小鈴鐺</b><p>規則平台取得應用程式資料 → 達規則 → 要求小鈴鐺渠道跳通知（下下次會議）。</p></div></div>
+          <div class="issue"><span class="q">移植</span><div class="c">
+            <b>CCET 小鈴鐺是否直接移植 EAP+</b><p>適配性待評估（下次會議）。</p></div></div>
+          <div class="issue"><span class="q">多租</span><div class="c">
+            <b>多台 EAP+ 共用一個 Keep</b><p>共用列表 / 小鈴鐺時，如何區分各 master 的事件與 incident。</p></div></div>
+        </div>
+
+        <div class="card">
+          <h4 style="font-size:15px;margin-bottom:18px">開發路線</h4>
+          <div class="roadmap">
+            <div class="rm next"><div class="ph">NEXT</div>
+              <h4>定案架構（解法二）</h4>
+              <p>釐清未解區塊後鎖定 Grafana 設規則 + Keep 發報彙整，確認投入人力。</p></div>
+            <div class="rm"><div class="ph">PHASE 2</div>
+              <h4>事件中心 MVP 落地</h4>
+              <p>告警列表 / 小鈴鐺 / 渠道設定三個介面；接 Keep 列表 API，評估變更狀態 API。</p></div>
+            <div class="rm"><div class="ph">PHASE 2</div>
+              <h4>多 master 區分機制</h4>
+              <p>解決多台 EAP+ 共用 Keep 時的事件歸屬與小鈴鐺 incident 串接。</p></div>
+            <div class="rm"><div class="ph">PHASE 3</div>
+              <h4>規則設定 UI + App Dev 通知</h4>
+              <p>開放規則設定（YAML / UI Builder 取捨）、開放 App Dev 經平台發送小鈴鐺。</p></div>
+            <div class="rm"><div class="ph">PHASE 3</div>
+              <h4>LLM 改善建議閉環</h4>
+              <p>串 Keep Incidents 與 AI 智能改善建議，提供告警研判與處理回饋。</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>系統監控與告警管理 · DIAEAP+ 案例研究</span>
+      <span>SOURCE：告警管理提案 v1.0（YH Chen）+ Figma（YH, Ann）</span>
+      <span>BUILT 2026 · 單檔 HTML · 可繼續開發</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+/* 導覽 active 狀態 */
+const links=[...document.querySelectorAll('#nav a')];
+const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+const spy=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){
+  links.forEach(l=>l.classList.remove('active'));map.get(e.target.id)?.classList.add('active');}});},
+  {rootMargin:'-45% 0px -50% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>spy.observe(s));
+
+/* 進場動畫 */
+const rev=document.querySelectorAll('.card,.stat,.layer,.oscard,.rm,.issue,.screen,.tablewrap,.pipe,.maptable');
+rev.forEach(el=>el.classList.add('reveal'));
+const io=new IntersectionObserver(es=>{es.forEach((e,i)=>{if(e.isIntersecting){
+  e.target.style.transitionDelay=(i%4*55)+'ms';e.target.classList.add('in');io.unobserve(e.target);}});},
+  {threshold:.1});
+rev.forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

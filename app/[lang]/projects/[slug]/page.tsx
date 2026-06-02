@@ -11,6 +11,7 @@ import ProjectMeta from "@/components/project/ProjectMeta";
 import ProjectBody from "@/components/project/ProjectBody";
 import ProjectSection from "@/components/project/ProjectSection";
 import ProjectGallery from "@/components/project/ProjectGallery";
+import ProjectGate from "@/components/project/ProjectGate";
 import NextProject from "@/components/project/NextProject";
 
 export async function generateStaticParams() {
@@ -52,6 +53,7 @@ export default async function ProjectPage({
   return (
     <>
       <Header lang={locale} pathname={`/${locale}/projects/${slug}`} />
+      <ProjectGate locked={project.locked} lang={locale}>
       <main id="main">
         <ProjectTitleBlock lang={locale} project={project} />
         <ProjectHero project={project} />
@@ -93,6 +95,7 @@ export default async function ProjectPage({
         <SectionRule weight="ultra" />
         <NextProject lang={locale} project={next} />
       </main>
+      </ProjectGate>
       <Footer lang={locale} />
     </>
   );

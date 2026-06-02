@@ -28,9 +28,9 @@ export default function ProjectsSection({ lang }: Props) {
         </div>
 
         <ul className="grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-x-10 md:gap-y-20">
-          {projects.map((project, i) => (
+          {projects.map((project) => (
             <li key={project.slug}>
-              <ProjectCard lang={lang} project={project} index={i} />
+              <ProjectCard lang={lang} project={project} />
             </li>
           ))}
         </ul>

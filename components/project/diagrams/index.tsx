@@ -8,6 +8,13 @@ import PrefillDesign from "./PrefillDesign";
 import PrefillOnboarding from "./PrefillOnboarding";
 import ComparisonTable from "./ComparisonTable";
 import StatusFlow from "./StatusFlow";
+import ResearchInsights from "./ResearchInsights";
+import ArchLayers from "./ArchLayers";
+import AlarmEval from "./AlarmEval";
+import WorkflowSerial from "./WorkflowSerial";
+import WorkflowParallel from "./WorkflowParallel";
+import WorkflowCompare from "./WorkflowCompare";
+import WorkflowArtifacts from "./WorkflowArtifacts";
 
 export const diagramRegistry: Record<
   DiagramId,
@@ -29,4 +36,11 @@ export const diagramRegistry: Record<
   ),
   "flow-current": (lang) => <StatusFlow lang={lang} variant="current" />,
   "flow-gdpr": (lang) => <StatusFlow lang={lang} variant="gdpr" />,
+  "research-ai-iiot": (lang) => <ResearchInsights lang={lang} />,
+  "arch-ai-iiot": (lang) => <ArchLayers lang={lang} />,
+  "eval-alarm": (lang) => <AlarmEval lang={lang} />,
+  "flow-serial": (lang) => <WorkflowSerial lang={lang} />,
+  "flow-parallel": (lang) => <WorkflowParallel lang={lang} />,
+  "compare-workflow": (lang) => <WorkflowCompare lang={lang} />,
+  "artifacts-workflow": (lang) => <WorkflowArtifacts lang={lang} />,
 };

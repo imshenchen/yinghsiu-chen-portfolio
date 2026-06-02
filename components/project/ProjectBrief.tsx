@@ -11,7 +11,10 @@ export default function ProjectBrief({ lang, project }: Props) {
     { label: t.project.brief.goal, value: pick(project.goal, lang) },
     { label: t.project.brief.role, value: pick(project.role, lang) },
     { label: t.project.brief.duration, value: pick(project.duration, lang) },
-    {
+  ];
+
+  if (project.outcomeBullets) {
+    rows.push({
       label: t.project.brief.outcome,
       value: (
         <ul className="space-y-3">
@@ -26,8 +29,8 @@ export default function ProjectBrief({ lang, project }: Props) {
           ))}
         </ul>
       ),
-    },
-  ];
+    });
+  }
 
   return (
     <section

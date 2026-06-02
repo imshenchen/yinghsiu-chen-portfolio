@@ -9,13 +9,17 @@ export default function ProjectMeta({ lang, project }: Props) {
   const items: { label: string; value: string; href?: string }[] = [
     { label: t.project.meta.year, value: project.year },
     { label: t.project.meta.role, value: pick(project.role, lang) },
-    {
-      label:
-        project.clientLabel === "product"
-          ? t.project.meta.product
-          : t.project.meta.client,
-      value: pick(project.client, lang),
-    },
+    ...(project.client
+      ? [
+          {
+            label:
+              project.clientLabel === "product"
+                ? t.project.meta.product
+                : t.project.meta.client,
+            value: pick(project.client, lang),
+          },
+        ]
+      : []),
     { label: t.project.meta.stack, value: project.stack },
   ];
   if (project.link) {
