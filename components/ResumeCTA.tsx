@@ -30,8 +30,7 @@ export default function ResumeCTA({ lang }: Props) {
         <div className="mt-14 flex justify-center md:mt-20">
           <a
             href={asset("/resume.pdf")}
-            target="_blank"
-            rel="noopener noreferrer"
+            download="Ying-Hsiu-Chen-Resume.pdf"
             className="label-mono group inline-flex items-center gap-4 border-2 border-[var(--color-background)] bg-transparent px-8 py-5 text-[var(--color-background)] transition-colors duration-100 hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] focus-visible:bg-[var(--color-background)] focus-visible:text-[var(--color-foreground)]"
           >
             <span>{t.resume.cta}</span>

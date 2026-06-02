@@ -14,7 +14,7 @@ export default function Header({ lang, pathname }: Props) {
     { href: `/${lang}#work`, label: t.nav.work },
     { href: `/${lang}#about`, label: t.nav.about },
     { href: `/${lang}#writing`, label: t.nav.writing },
-    { href: "/resume.pdf", label: t.nav.resume, external: true },
+    { href: "/resume.pdf", label: t.nav.resume, download: true },
   ];
 
   return (
@@ -35,8 +35,8 @@ export default function Header({ lang, pathname }: Props) {
             <Link
               key={it.label}
               href={it.href}
-              {...(it.external
-                ? { target: "_blank", rel: "noopener noreferrer" }
+              {...(it.download
+                ? { download: "Ying-Hsiu-Chen-Resume.pdf" }
                 : {})}
               className="label-mono border-b border-transparent pb-px transition-colors hover:border-[var(--color-foreground)] focus-visible:border-[var(--color-foreground)]"
             >
