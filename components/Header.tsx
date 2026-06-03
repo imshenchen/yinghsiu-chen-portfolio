@@ -8,13 +8,18 @@ type Props = {
   pathname: string;
 };
 
+const resumeFile: Record<Locale, string> = {
+  zh: "陳盈秀_履歷.pdf",
+  en: "Ying-Hsiu-Chen-Resume.pdf",
+};
+
 export default function Header({ lang, pathname }: Props) {
   const t = getMessages(lang);
   const navItems = [
     { href: `/${lang}#work`, label: t.nav.work },
     { href: `/${lang}#about`, label: t.nav.about },
     { href: `/${lang}#writing`, label: t.nav.writing },
-    { href: "/resume.pdf", label: t.nav.resume, download: true },
+    { href: `/resume-${lang}.pdf`, label: t.nav.resume, download: true },
   ];
 
   return (
@@ -35,9 +40,7 @@ export default function Header({ lang, pathname }: Props) {
             <Link
               key={it.label}
               href={it.href}
-              {...(it.download
-                ? { download: "Ying-Hsiu-Chen-Resume.pdf" }
-                : {})}
+              {...(it.download ? { download: resumeFile[lang] } : {})}
               className="label-mono border-b border-transparent pb-px transition-colors hover:border-[var(--color-foreground)] focus-visible:border-[var(--color-foreground)]"
             >
               {it.label}
